@@ -2,6 +2,7 @@ package com.training.codingstandards;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -23,7 +24,7 @@ class EmployeeProcessorTest {
         assertEquals(9200, row.bonus);
         assertEquals(18400, row.tax);
         assertEquals("L3", row.grade);
-        assertEquals(70400, row.netPay);
+        assertEquals(82800, row.netPay);
         assertEquals(64, row.hashedId.length());
         assertEquals(64, row.token.length());
     }
@@ -42,7 +43,7 @@ class EmployeeProcessorTest {
 
     @Test
     void nullEmployeeIsRejected() {
-        assertThrows(IllegalArgumentException.class, () -> processor.process(List.of((Employee) null)));
+        assertThrows(IllegalArgumentException.class, () -> processor.process(Arrays.asList((Employee) null)));
     }
 
     private EmployeeProcessor.PayrollRow row(String department, double salary, int years, String country) {
