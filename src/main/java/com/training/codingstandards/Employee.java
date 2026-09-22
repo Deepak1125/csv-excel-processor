@@ -1,13 +1,10 @@
 package com.training.codingstandards;
 
+import java.time.Instant;
 import java.util.Date;
+import java.util.Objects;
 
-/**
- * Employee record loaded from CSV.
- * Intentionally poorly encapsulated for the workshop.
- */
 public class Employee {
-
     public String empId;
     public String name;
     public String email;
@@ -31,18 +28,26 @@ public class Employee {
         this.yearsOfService = yearsOfService;
         this.country = country;
         this.managerEmail = managerEmail;
-        this.lastProcessed = new Date();
+        this.lastProcessed = Date.from(Instant.now());
+    }
+
+    public String getName() {
+        return name;
     }
 
     @Override
     public boolean equals(Object obj) {
-        if (obj == this) {
+        if (this == obj) {
             return true;
         }
-        if (!(obj instanceof Employee)) {
+        if (!(obj instanceof Employee other)) {
             return false;
         }
-        Employee other = (Employee) obj;
-        return empId == other.empId;
+        return Objects.equals(empId, other.empId);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(empId);
     }
 }

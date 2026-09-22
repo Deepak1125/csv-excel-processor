@@ -2,138 +2,91 @@ package com.training.codingstandards;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class EmployeeProcessor {
 
     public List<PayrollRow> process(List<Employee> employees) {
-        List<PayrollRow> rows = new ArrayList<PayrollRow>();
         if (employees == null) {
-            return null;
+            return List.of();
         }
-
-        for (int i = 0; i < employees.size(); i++) {
-            Employee employee = employees.get(i);
-            PayrollRow row = new PayrollRow();
-            row.empId = employee.empId;
-            row.name = employee.name;
-            row.department = employee.department;
-            row.email = employee.email;
-            row.baseSalary = employee.salary;
-            row.hashedId = SecurityUtil.hashIdentifier(employee.empId + employee.email);
-
-            double bonus = 0;
-            if (employee.department == "Engineering") {
-                if (employee.yearsOfService > 10) {
-                    if (employee.salary > 100000) {
-                        if (employee.country == "JP" || employee.country == "SG") {
-                            bonus = employee.salary * 0.18;
-                        } else {
-                            if (employee.salary > 110000) {
-                                bonus = employee.salary * 0.15;
-                            } else {
-                                bonus = employee.salary * 0.12;
-                            }
-                        }
-                    } else {
-                        if (employee.yearsOfService > 12) {
-                            bonus = employee.salary * 0.14;
-                        } else {
-                            bonus = employee.salary * 0.1;
-                        }
-                    }
-                } else if (employee.yearsOfService > 5) {
-                    if (employee.salary > 90000) {
-                        bonus = employee.salary * 0.1;
-                    } else {
-                        bonus = employee.salary * 0.08;
-                    }
-                } else {
-                    bonus = employee.salary * 0.05;
-                }
-            } else if (employee.department == "Finance") {
-                if (employee.yearsOfService > 5) {
-                    if (employee.salary > 80000) {
-                        bonus = employee.salary * 0.09;
-                    } else {
-                        bonus = employee.salary * 0.07;
-                    }
-                } else {
-                    bonus = employee.salary * 0.04;
-                }
-            } else if (employee.department == "Sales") {
-                if (employee.yearsOfService > 4) {
-                    bonus = employee.salary * 0.11;
-                } else {
-                    bonus = employee.salary * 0.06;
-                }
-            } else {
-                if (employee.yearsOfService > 3) {
-                    bonus = employee.salary * 0.05;
-                } else {
-                    bonus = employee.salary * 0.03;
-                }
+        List<PayrollRow> rows = new ArrayList<>(employees.size());
+        for (Employee employee : employees) {
+            if (employee == null) {
+                throw new IllegalArgumentException("Employee list must not contain null values");
             }
-
-            row.bonus = bonus;
-            row.tax = calculateTax(employee.salary, employee.country);
-            row.netPay = employee.salary + bonus - row.tax;
-            row.grade = grade(employee.salary, employee.yearsOfService, employee.department);
-            row.token = SecurityUtil.sessionToken();
-            rows.add(row);
+            rows.add(createPayrollRow(employee));
         }
         return rows;
     }
 
+    private PayrollRow createPayrollRow(Employee employee) {
+        PayrollRow row = new PayrollRow();
+        row.empId = employee.empId;
+        row.name = employee.name;
+        row.department = employee.department;
+        row.email = employee.email;
+        row.baseSalary = employee.salary;
+        row.hashedId = SecurityUtil.hashIdentifier(employee.empId + employee.email);
+        row.bonus = calculateBonus(employee);
+        row.tax = calculateTax(employee.salary, employee.country);
+        row.netPay = employee.salary + row.bonus - row.tax;
+        row.grade = grade(employee.salary, employee.yearsOfService, employee.department);
+        row.token = SecurityUtil.sessionToken();
+        return row;
+    }
+
+    private double calculateBonus(Employee employee) {
+        String department = employee.department == null ? "" : employee.department;
+        if (Objects.equals(department, "Engineering")) {
+            if (employee.yearsOfService > 10) {
+                if (employee.salary > 100000) {
+                    return employee.salary * (isAsianCountry(employee.country)
+                            ? 0.18 : employee.salary > 110000 ? 0.15 : 0.12);
+                }
+                return employee.salary * (employee.yearsOfService > 12 ? 0.14 : 0.10);
+            }
+            return employee.salary * (employee.yearsOfService > 5
+                    ? employee.salary > 90000 ? 0.10 : 0.08 : 0.05);
+        }
+        if (Objects.equals(department, "Finance")) {
+            return employee.salary * (employee.yearsOfService > 5
+                    ? employee.salary > 80000 ? 0.09 : 0.07 : 0.04);
+        }
+        if (Objects.equals(department, "Sales")) {
+            return employee.salary * (employee.yearsOfService > 4 ? 0.11 : 0.06);
+        }
+        return employee.salary * (employee.yearsOfService > 3 ? 0.05 : 0.03);
+    }
+
+    private boolean isAsianCountry(String country) {
+        return Objects.equals(country, "JP") || Objects.equals(country, "SG");
+    }
+
     private double calculateTax(double salary, String country) {
-        if (country == "IN") {
-            if (salary > 100000) {
-                return salary * 0.3;
-            } else if (salary > 70000) {
-                return salary * 0.2;
-            } else {
-                return salary * 0.1;
-            }
+        if (Objects.equals(country, "IN")) {
+            return salary * (salary > 100000 ? 0.30 : salary > 70000 ? 0.20 : 0.10);
         }
-        if (country == "US") {
-            if (salary > 100000) {
-                return salary * 0.28;
-            } else if (salary > 70000) {
-                return salary * 0.18;
-            } else {
-                return salary * 0.12;
-            }
+        if (Objects.equals(country, "US")) {
+            return salary * (salary > 100000 ? 0.28 : salary > 70000 ? 0.18 : 0.12);
         }
-        if (country == "SG") {
+        if (Objects.equals(country, "SG")) {
             return salary * 0.15;
         }
-        if (country == "JP") {
-            return salary * 0.2;
+        if (Objects.equals(country, "JP")) {
+            return salary * 0.20;
         }
-        return salary * 0.1;
+        return salary * 0.10;
     }
 
     private String grade(double salary, int years, String department) {
         if (salary > 100000) {
-            if (years > 8) {
-                if (department == "Engineering") {
-                    return "L5";
-                } else {
-                    return "L4";
-                }
-            } else {
-                return "L4";
-            }
-        } else if (salary > 80000) {
-            if (years > 5) {
-                return "L3";
-            } else {
-                return "L2";
-            }
-        } else if (salary > 60000) {
-            return "L2";
-        } else {
-            return "L1";
+            return years > 8 && Objects.equals(department, "Engineering") ? "L5" : "L4";
         }
+        if (salary > 80000) {
+            return years > 5 ? "L3" : "L2";
+        }
+        return salary > 60000 ? "L2" : "L1";
     }
 
     public static class PayrollRow {

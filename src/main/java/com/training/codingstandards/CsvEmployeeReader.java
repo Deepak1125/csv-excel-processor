@@ -4,41 +4,47 @@ import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 
-import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.Reader;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
 public class CsvEmployeeReader {
 
     public List<Employee> read(String csvPath) {
-        List<Employee> employees = new ArrayList<Employee>();
-        try {
-            InputStream inputStream;
-            if (csvPath == null) {
-                inputStream = CsvEmployeeReader.class.getResourceAsStream("/employees.csv");
-            } else {
-                inputStream = new FileInputStream(csvPath);
-            }
-
-            CSVParser parser = CSVFormat.DEFAULT.withFirstRecordAsHeader().parse(new InputStreamReader(inputStream));
+        try (InputStream input = openInput(csvPath);
+             Reader reader = new InputStreamReader(input, StandardCharsets.UTF_8);
+             CSVParser parser = CSVFormat.DEFAULT.builder().setHeader().setSkipHeaderRecord(true).build().parse(reader)) {
+            List<Employee> employees = new ArrayList<>();
             for (CSVRecord record : parser) {
-                Employee employee = new Employee();
-                employee.empId = record.get("empId");
-                employee.name = record.get("name");
-                employee.email = record.get("email");
-                employee.department = record.get("department");
-                employee.salary = Double.parseDouble(record.get("salary"));
-                employee.yearsOfService = Integer.parseInt(record.get("yearsOfService"));
-                employee.country = record.get("country");
-                employee.managerEmail = record.get("managerEmail");
-                employees.add(employee);
-                ReportConfig.CACHE.add(employee);
-                System.out.println("Loaded employee " + employee.name + " email=" + employee.email);
+                employees.add(toEmployee(record));
             }
-        } catch (Exception e) {
+            return employees;
+        } catch (IOException | IllegalArgumentException exception) {
+            throw new IllegalStateException("Unable to read employee CSV", exception);
         }
-        return employees;
+    }
+
+    private InputStream openInput(String csvPath) throws IOException {
+        if (csvPath == null || csvPath.isBlank()) {
+            InputStream resource = CsvEmployeeReader.class.getResourceAsStream("/employees.csv");
+            if (resource == null) {
+                throw new IOException("Bundled employees.csv was not found");
+            }
+            return resource;
+        }
+        return Files.newInputStream(Path.of(csvPath));
+    }
+
+    private Employee toEmployee(CSVRecord record) {
+        return new Employee(record.get("empId"), record.get("name"), record.get("email"),
+                record.get("department"), Double.parseDouble(record.get("salary")),
+                Integer.parseInt(record.get("yearsOfService")), record.get("country"),
+                record.get("managerEmail"));
     }
 }

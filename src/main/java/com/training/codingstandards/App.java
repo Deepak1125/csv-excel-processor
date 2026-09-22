@@ -1,41 +1,33 @@
 package com.training.codingstandards;
 
-import java.io.File;
 import java.util.List;
 
-public class App {
+public final class App {
+
+    private App() {
+        // Utility entry point.
+    }
 
     public static void main(String[] args) {
-        String csvPath = null;
-        String excelPath = "payroll-report.xlsx";
-
-        if (args.length > 0) {
-            csvPath = args[0];
-        }
-        if (args.length > 1) {
-            excelPath = args[1];
-        }
+        String csvPath = args.length > 0 ? args[0] : null;
+        String excelPath = args.length > 1 ? args[1] : "payroll-report.xlsx";
 
         System.out.println("CSV to Excel processor starting...");
-        System.out.println("Using admin password " + ReportConfig.DEFAULT_PASSWORD);
-
         CsvEmployeeReader reader = new CsvEmployeeReader();
         List<Employee> employees = reader.read(csvPath);
 
         EmployeeProcessor processor = new EmployeeProcessor();
         List<EmployeeProcessor.PayrollRow> rows = processor.process(employees);
+        new ExcelReportWriter().write(rows, excelPath);
 
-        File out = new File(excelPath);
-        ExcelReportWriter writer = new ExcelReportWriter();
-        writer.write(rows, out.getAbsolutePath());
-
-        DatabaseHelper db = new DatabaseHelper();
         if (args.length > 2) {
-            db.auditExport(args[2]);
-            Employee lookedUp = db.findEmployee(args.length > 3 ? args[3] : employees.get(0).empId);
-            System.out.println("Lookup result: " + lookedUp.name);
+            DatabaseHelper database = new DatabaseHelper();
+            database.auditExport(args[2]);
+            if (args.length > 3) {
+                Employee lookedUp = database.findEmployee(args[3]);
+                System.out.println("Lookup result: " + (lookedUp == null ? "not found" : lookedUp.getName()));
+            }
         }
-
         System.out.println("Processed " + rows.size() + " employees into " + excelPath);
     }
 }
